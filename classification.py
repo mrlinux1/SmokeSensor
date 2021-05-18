@@ -4,7 +4,7 @@ from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras import Sequential, optimizers
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import numpy as np
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 vgg_conv = vgg16.VGG16(weights='imagenet',
                   include_top=False,
@@ -58,7 +58,7 @@ for i, (inputs_batch, labels_batch) in enumerate(train_generator):
     train_features[i * batch_size : (i + 1) * batch_size] = features_batch
     train_labels[i * batch_size : (i + 1) * batch_size] = labels_batch
 
-# iterate through the batches of train images and labels
+# iterate through the batches of validation images and labels
 for i, (inputs_batch, labels_batch) in enumerate(validation_generator):
     if i * batch_size >= nVal:
         break    
@@ -111,20 +111,20 @@ predictions = model.predict_classes(validation_features_vec)
 prob = model.predict(validation_features_vec)
 
 errors = np.where(predictions != ground_truth)[0]
-print("Number of errors = {}/{}".format(len(errors),nVal))
+print("Number of errors = {}/{}".format(errors,nVal))
 
-for i in range(len(errors)):
-    pred_class = np.argmax(prob[errors[i]])
-    pred_label = idx2label[pred_class]
+# for i in range(len(errors)):
+#     pred_class = np.argmax(prob[errors[i]])
+#     pred_label = idx2label[pred_class]
     
-    print('Original label:{}, Prediction :{}, confidence : {:.3f}'.format(
-        fnames[errors[i]].split('/')[0],
-        pred_label,
-        prob[errors[i]][pred_class]))
+#     print('Original label:{}, Prediction :{}, confidence : {:.3f}'.format(
+#         fnames[errors[i]].split('/')[0],
+#         pred_label,
+#         prob[errors[i]][pred_class]))
     
-    original = tensorflow.keras.preprocessing.image.load_img('{}/{}'.format(validation_dir,fnames[errors[i]]))
-    plt.axis('off')
-    plt.imshow(original)
-    plt.show()
+#     original = tensorflow.keras.preprocessing.image.load_img('{}/{}'.format(validation_dir,fnames[errors[i]]))
+#     plt.axis('off')
+#     plt.imshow(original)
+#     plt.show()
 
 
