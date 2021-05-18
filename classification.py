@@ -2,7 +2,7 @@ import tensorflow
 from tensorflow.keras.applications import vgg16
 from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras import Sequential, optimizers
-from tensorflow.keras.preprocession.image import ImageDataGenerator
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import numpy as np
 
 vgg_conv = vgg16.VGG16(weights='imagenet',
@@ -23,13 +23,26 @@ datagen = ImageDataGenerator(rescale=1./255)
 # define the batch size
 batch_size = 20
 
+
 # the defined shape is equal to the network output tensor shape
 train_features = np.zeros(shape=(nTrain, 7, 7, 512))
 train_labels = np.zeros(shape=(nTrain,3))
 
+# the defined shape is equal to the network output tensor shape
+val_features = np.zeros(shape=(nVal, 7, 7, 512))
+val_labels = np.zeros(shape=(nVal,3))
+
 # generate batches of train images and labels
 train_generator = datagen.flow_from_directory(
     train_dir,
+    target_size=(224, 224),
+    batch_size=batch_size,
+    class_mode='categorical',
+    shuffle=True)
+
+# generate batches of train images and labels
+val_generator = datagen.flow_from_directory(
+    validation_dir,
     target_size=(224, 224),
     batch_size=batch_size,
     class_mode='categorical',
@@ -44,8 +57,21 @@ for i, (inputs_batch, labels_batch) in enumerate(train_generator):
     train_features[i * batch_size : (i + 1) * batch_size] = features_batch
     train_labels[i * batch_size : (i + 1) * batch_size] = labels_batch
 
+# iterate through the batches of train images and labels
+for i, (inputs_batch, labels_batch) in enumerate(val_generator):
+    if i * batch_size >= nVal:
+        break    
+    # pass the images through the network
+    features_batch = vgg_conv.predict(inputs_batch)
+    val_features[i * batch_size : (i + 1) * batch_size] = features_batch
+    val_labels[i * batch_size : (i + 1) * batch_size] = labels_batch
+
 # reshape train_features into vector        
 train_features_vec = np.reshape(train_features, (nTrain, 7 * 7 * 512))
+print("Train features: {}".format(train_features_vec.shape))
+
+# reshape train_features into vector        
+val_features_vec = np.reshape(val_features, (nVal, 7 * 7 * 512))
 print("Train features: {}".format(train_features_vec.shape))
 
 model = Sequential()
