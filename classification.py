@@ -4,6 +4,7 @@ from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras import Sequential, optimizers
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import numpy as np
+import matplotlib as plt
 
 vgg_conv = vgg16.VGG16(weights='imagenet',
                   include_top=False,
@@ -29,8 +30,8 @@ train_features = np.zeros(shape=(nTrain, 7, 7, 512))
 train_labels = np.zeros(shape=(nTrain,3))
 
 # the defined shape is equal to the network output tensor shape
-val_features = np.zeros(shape=(nVal, 7, 7, 512))
-val_labels = np.zeros(shape=(nVal,3))
+validation_features = np.zeros(shape=(nVal, 7, 7, 512))
+validation_labels = np.zeros(shape=(nVal,3))
 
 # generate batches of train images and labels
 train_generator = datagen.flow_from_directory(
@@ -41,7 +42,7 @@ train_generator = datagen.flow_from_directory(
     shuffle=True)
 
 # generate batches of train images and labels
-val_generator = datagen.flow_from_directory(
+validation_generator = datagen.flow_from_directory(
     validation_dir,
     target_size=(224, 224),
     batch_size=batch_size,
@@ -58,21 +59,21 @@ for i, (inputs_batch, labels_batch) in enumerate(train_generator):
     train_labels[i * batch_size : (i + 1) * batch_size] = labels_batch
 
 # iterate through the batches of train images and labels
-for i, (inputs_batch, labels_batch) in enumerate(val_generator):
+for i, (inputs_batch, labels_batch) in enumerate(validation_generator):
     if i * batch_size >= nVal:
         break    
     # pass the images through the network
     features_batch = vgg_conv.predict(inputs_batch)
-    val_features[i * batch_size : (i + 1) * batch_size] = features_batch
-    val_labels[i * batch_size : (i + 1) * batch_size] = labels_batch
+    validation_features[i * batch_size : (i + 1) * batch_size] = features_batch
+    validation_labels[i * batch_size : (i + 1) * batch_size] = labels_batch
 
 # reshape train_features into vector        
 train_features_vec = np.reshape(train_features, (nTrain, 7 * 7 * 512))
 print("Train features: {}".format(train_features_vec.shape))
 
 # reshape train_features into vector        
-val_features_vec = np.reshape(val_features, (nVal, 7 * 7 * 512))
-print("Train features: {}".format(train_features_vec.shape))
+validation_features_vec = np.reshape(validation_features, (nVal, 7 * 7 * 512))
+print("Validation features: {}".format(validation_features_vec.shape))
 
 model = Sequential()
 model.add(Dense(512, activation='relu', input_dim=7 * 7 * 512))
@@ -121,7 +122,7 @@ for i in range(len(errors)):
         pred_label,
         prob[errors[i]][pred_class]))
     
-    original = load_img('{}/{}'.format(validation_dir,fnames[errors[i]]))
+    original = tensorflow.keras.preprocessing.image.load_img('{}/{}'.format(validation_dir,fnames[errors[i]]))
     plt.axis('off')
     plt.imshow(original)
     plt.show()
