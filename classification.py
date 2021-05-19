@@ -11,12 +11,12 @@ vgg_conv = vgg16.VGG16(weights='imagenet',
                   input_shape=(224, 224, 3))
 
 # each folder contains three subfolders in accordance with the number of classes
-train_dir = './clean-dataset/train'
-validation_dir = './clean-dataset/validation'
+train_dir = './dataset/train'
+validation_dir = './dataset/validation'
 
 # the number of images for train and test is divided into 80:20 ratio
-nTrain = 600
-nVal = 150
+nTrain = 802
+nVal = 197
 
 # load the normalized images
 datagen = ImageDataGenerator(rescale=1./255)
@@ -27,11 +27,11 @@ batch_size = 20
 
 # the defined shape is equal to the network output tensor shape
 train_features = np.zeros(shape=(nTrain, 7, 7, 512))
-train_labels = np.zeros(shape=(nTrain,3))
+train_labels = np.zeros(shape=(nTrain,2))
 
 # the defined shape is equal to the network output tensor shape
 validation_features = np.zeros(shape=(nVal, 7, 7, 512))
-validation_labels = np.zeros(shape=(nVal,3))
+validation_labels = np.zeros(shape=(nVal,2))
 
 # generate batches of train images and labels
 train_generator = datagen.flow_from_directory(
@@ -78,7 +78,7 @@ print("Validation features: {}".format(validation_features_vec.shape))
 model = Sequential()
 model.add(Dense(512, activation='relu', input_dim=7 * 7 * 512))
 model.add(Dropout(0.5))
-model.add(Dense(3, activation='softmax'))
+model.add(Dense(2, activation='softmax'))
 
 # configure the model for training
 model.compile(optimizer=optimizers.RMSprop(lr=2e-4),
@@ -109,22 +109,39 @@ print("The list of classes: ", idx2label)
 
 predictions = model.predict_classes(validation_features_vec)
 prob = model.predict(validation_features_vec)
-
+model.summary()
 errors = np.where(predictions != ground_truth)[0]
-print("Number of errors = {}/{}".format(errors,nVal))
+print("Number of errors = {}/{}".format(len(errors),nVal))
 
-# for i in range(len(errors)):
-#     pred_class = np.argmax(prob[errors[i]])
-#     pred_label = idx2label[pred_class]
+
+
+model.save('classification.model')
+
+# Convert the model
+converter = tensorflow.lite.TFLiteConverter.from_saved_model("classification.model") # path to the SavedModel directory
+converter.optimizations = [tensorflow.lite.Optimize.DEFAULT]
+
+def representative_dataset_generator():
+  for value in train_features:
+    yield [np.array(value, dtype=np.float32, ndmin=2)]
+converter.representative_dataset = representative_dataset_generator
+
+tflite_model = converter.convert()
+
+# Save the model.
+with open('model.tflite', 'wb') as f:
+  f.write(tflite_model)
+
+for i in range(len(errors)):
+    pred_class = np.argmax(prob[errors[i]])
+    pred_label = idx2label[pred_class]
+   
+    print('Original label:{}, Prediction :{}, confidence : {:.3f}'.format(
+        fnames[errors[i]].split('/')[0],
+        pred_label,
+        prob[errors[i]][pred_class]))
     
-#     print('Original label:{}, Prediction :{}, confidence : {:.3f}'.format(
-#         fnames[errors[i]].split('/')[0],
-#         pred_label,
-#         prob[errors[i]][pred_class]))
-    
-#     original = tensorflow.keras.preprocessing.image.load_img('{}/{}'.format(validation_dir,fnames[errors[i]]))
-#     plt.axis('off')
-#     plt.imshow(original)
-#     plt.show()
-
-
+    original = tensorflow.keras.preprocessing.image.load_img('{}/{}'.format(validation_dir,fnames[errors[i]]))
+    plt.axis('off')
+    plt.imshow(original)
+    plt.show()
